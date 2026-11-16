@@ -225,9 +225,7 @@
             const W = { None: 0, Low: 1, Medium: 2, High: 3 };
             CHOICE_CODE = "" + settings.strength + settings.range + W[signalWeights["Purchase history"]] + W[signalWeights["Search patterns"]] + W[signalWeights["Location"]];
             logChoice({ event: "choice", strength: settings.strength, range: settings.range, purchase_history: signalWeights["Purchase history"], search_patterns: signalWeights["Search patterns"], location: signalWeights["Location"], changes: changeCount, seconds_on_settings: Math.round((Date.now() - settingsShownAt) / 100) / 10 });
-            // Opting out (None) is always respected; otherwise cues stay advisory.
-            const allOff = signals.every(x => signalWeights[x] === "None") || settings.strength === 0;
-            if (allOff) { applySignalChoices(); } else { applyAdvisoryCues(); }
+            applySignalChoices();
             startGmailSync();
         }
         function applySignalChoices() {
@@ -248,16 +246,6 @@
                 document.getElementById('sync-text').innerText = "Syncing your Google account (" + used + " only)...";
                 document.getElementById('sync-badge').innerText = "Data Sync Active (" + used + ")";
             }
-        }
-
-        function applyAdvisoryCues() {
-            // ADVISORY: feed cues do not follow the participant's choice.
-            document.getElementById('hero-title').innerText = "Your Selects.";
-            document.getElementById('sync-text').innerText = "Building your feed...";
-            document.getElementById('timer-prefix').innerText = "Feed ready!";
-            const badge = document.getElementById('sync-badge');
-            badge.innerText = "Curated by EcoStep's algorithm";
-            badge.className = "text-[9px] font-black px-3 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-full uppercase";
         }
 
         function startGmailSync() {

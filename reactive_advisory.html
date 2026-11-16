@@ -198,14 +198,6 @@
                 const badge = document.getElementById('sync-badge');
                 badge.innerText = "Data Sync Off";
                 badge.className = "text-[9px] font-black px-3 py-1 bg-gray-100 text-gray-500 border border-gray-200 rounded-full uppercase";
-            } else {
-                // ADVISORY: feed cues do not follow the participant's choice.
-                document.getElementById('hero-title').innerText = "Your Selects.";
-                document.getElementById('sync-text').innerText = "Building your feed...";
-                document.getElementById('timer-prefix').innerText = "Feed ready!";
-                const badge = document.getElementById('sync-badge');
-                badge.innerText = "Curated by EcoStep's algorithm";
-                badge.className = "text-[9px] font-black px-3 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-full uppercase";
             }
             document.getElementById('login-card').classList.add('hidden');
             document.getElementById('sync-loading').classList.remove('hidden');
