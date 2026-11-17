@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoStep Edit | Premium Select Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 자간 및 레이아웃 강제 고정 */
+        * { letter-spacing: -0.02em !important; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #fff; color: #1a1a1a; margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+        .btn-black { background-color: #000; color: white; transition: all 0.2s; border: 1px solid #000; }
+        .google-card { max-width: 500px; width: 100%; background: white; padding: 48px; border: 1px solid #dadce0; border-radius: 8px; }
+        .input-field { width: 100%; padding: 14px; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; outline: none; }
+
+        #timer-layer { position: fixed; top: 0; left: 0; right: 0; z-index: 300; background-color: #2563eb; color: white; padding: 12px 24px; display: none; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .progress-bg { width: 128px; height: 8px; background-color: #60a5fa; border-radius: 9999px; overflow: hidden; }
+        #progress-bar { height: 100%; background-color: white; width: 100%; transition: width 1s linear; }
+
+        .match-tag { font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 4px; background: #ebf5ff; color: #1a73e8; display: inline-block; margin-bottom: 6px; }
+        .sync-loader { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1a73e8; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #cart-drawer { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .cart-open { transform: translateX(0) !important; }
+
+        #main-site { padding-top: 80px; }
+    </style>
+</head>
+<body>
+
+    <div id="timer-layer">
+        <div class="flex items-center gap-3">
+            <p class="font-medium text-sm md:text-base"><span id="timer-prefix">Data Synced!</span> Time remaining: <span id="countdown-text" class="text-xl font-bold">45</span>s.</p>
+        </div>
+        <div class="progress-bg hidden sm:block"><div id="progress-bar"></div></div>
+    </div>
+
+    <div id="auth-screen" class="fixed inset-0 bg-white z-[200] flex items-center justify-center p-6 overflow-y-auto">
+        <div id="login-card" class="google-card shadow-lg">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-black italic tracking-tighter mb-4">ECOSTEP EDIT.</h1>
+                <p id="auth-title" class="text-2xl text-gray-800 tracking-tight font-bold">Enter Prolific ID</p>
+            </div>
+
+            <div id="step-prolific" class="space-y-6">
+                <input type="text" id="prolific-id" placeholder="Prolific ID" class="input-field">
+                <button onclick="showNotice()" class="w-full bg-black text-white py-4 rounded-md font-bold text-sm">Continue</button>
+            </div>
+
+            <div id="step-say" class="hidden space-y-8">
+                <div class="border-2 border-gray-800 rounded-md p-6 bg-white text-left">
+                    <p class="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">How your feed is decided</p>
+                    <p class="text-xl font-black text-gray-900 mb-3 tracking-tight">EcoStep&#39;s algorithm decides how your data is used</p>
+                    <p class="text-sm text-gray-700 leading-relaxed">On the next screen, you can tell us how you would like your data to be used for your feed. EcoStep&#39;s algorithm will <b>treat your choices as a request</b> and decide how your data is actually used.</p>
+                </div>
+                <button onclick="showSettings()" class="w-full bg-black text-white py-4 rounded-md font-bold text-sm">Continue</button>
+            </div>
+
+            <div id="step-notice" class="hidden space-y-8">
+                <div class="border border-blue-100 bg-blue-50 rounded-md p-5 text-left">
+                    <p class="text-sm font-bold text-gray-900 mb-3">Personalization settings</p>
+                    <p class="text-sm text-gray-700 leading-relaxed">EcoStep analyzes your Google account data (purchase history, search patterns, and location) to provide highly curated product suggestions. Use the setting below to indicate how you would like this data to shape your feed.</p>
+                </div>
+
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black uppercase text-gray-400 text-center tracking-widest">How strongly should your data shape your feed?</p>
+                    <div class="flex justify-between text-[10px] font-black uppercase text-gray-400"><span>Light</span><span>Strong</span></div>
+                    <div class="grid grid-cols-7 gap-1.5" id="box-group-strength"></div>
+                </div>
+
+
+
+                <p class="text-xs font-bold text-gray-600 text-center">Reminder: your choices are a request. EcoStep&#39;s algorithm decides.</p>
+                <button onclick="submitSettings()" class="w-full bg-black text-white py-4 rounded-md font-bold text-sm">Start Shopping</button>
+            </div>
+        </div>
+        <div id="sync-loading" class="hidden text-center">
+            <div class="flex justify-center mb-4"><div class="sync-loader"></div></div>
+            <p id="sync-text" class="text-xs font-bold text-blue-600 animate-pulse">Syncing your Google account...</p>
+        </div>
+    </div>
+
+    <div id="main-site" class="hidden opacity-0 transition-opacity duration-1000">
+        <nav class="border-b border-gray-100 px-8 py-6 flex justify-between items-center fixed top-[48px] left-0 right-0 bg-white/95 backdrop-blur-sm z-50">
+            <span class="text-xl font-black italic tracking-tighter">ECOSTEP EDIT.</span>
+            <div class="flex items-center gap-6">
+                <span onclick="toggleCart()" class="cursor-pointer font-bold bg-black text-white px-5 py-2 rounded-full text-[10px] tracking-widest uppercase">Bag(<span id="cart-count">0</span>)</span>
+            </div>
+        </nav>
+
+        <header class="py-24 text-center border-b border-gray-50 mt-12">
+            <h2 id="hero-title" class="text-6xl font-black italic uppercase mb-6 tracking-tighter">Your Selects.</h2>
+            <div class="flex justify-center gap-3">
+                <span id="sync-badge" class="text-[9px] font-black px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full uppercase">Data Sync Active</span>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto py-16 px-8">
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16"></div>
+        </main>
+    </div>
+
+    <div id="cart-overlay" onclick="toggleCart()" class="hidden fixed inset-0 bg-black/40 z-[340] backdrop-blur-sm"></div>
+    <div id="cart-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[350] shadow-2xl transform translate-x-full flex flex-col">
+        <div class="p-8 border-b border-gray-100 flex justify-between items-center"><h2 class="text-2xl font-black italic uppercase">Bag.</h2><button onclick="toggleCart()" class="text-3xl font-light">&times;</button></div>
+        <div id="cart-items" class="flex-1 overflow-y-auto p-8 space-y-6"></div>
+        <div class="p-8 border-t border-gray-100 bg-gray-50 flex justify-between items-center"><span class="text-xl font-black" id="cart-total">$0</span><button class="btn-black px-10 py-5 font-black text-xs uppercase tracking-widest">Checkout</button></div>
+    </div>
+
+    <div id="product-modal" class="hidden fixed inset-0 bg-black/60 z-[320] flex items-center justify-center p-4">
+        <div class="bg-white max-w-4xl w-full flex flex-col relative overflow-hidden rounded-lg">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-3xl z-10 font-light">&times;</button>
+            <div class="flex flex-col md:flex-row w-full">
+                <div class="md:w-1/2 bg-gray-100"><img id="modal-img" class="w-full h-full object-cover"></div>
+                <div class="md:w-1/2 p-12 flex flex-col justify-center">
+                    
+                    <p id="modal-brand" class="text-[11px] font-black uppercase text-gray-400 mb-1 tracking-widest"></p>
+                    <h2 id="modal-title" class="text-4xl font-black uppercase mb-4 tracking-tighter"></h2>
+                    <p id="modal-price" class="text-2xl font-bold mb-8 text-red-600"></p>
+                    
+                    <button onclick="addToCart()" id="add-btn" class="btn-black py-5 font-black text-xs uppercase tracking-widest">Add to Bag</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="finish-overlay" class="hidden fixed inset-0 bg-white z-[500] flex flex-col items-center justify-center p-6 text-center">
+        <div class="max-w-md"><h1 class="text-3xl font-bold mb-4">Time is up!</h1><p class="text-xl mb-8">Please go back to your survey.</p></div>
+    </div>
+
+    <script>
+        const products = [
+            { id: 1, brand: "Nike", title: "Air Max 270 'Solar Red'", price: 160, match: "98% Match", source: "Based on purchase history", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80" },
+            { id: 2, brand: "Nike", title: "Air Max 270 'Triple White'", price: 160, match: "95% Match", source: "Recent search match", img: "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800&q=80" },
+            { id: 3, brand: "New Balance", title: "997 Heritage 'Navy'", price: 185, match: "92% Match", source: "Brand affinity detected", img: "https://images.unsplash.com/photo-1539185441755-769473a23570?w=800&q=80" },
+            { id: 4, brand: "Nike", title: "Air Jordan 1 'Chicago' Mid", price: 125, match: "87% Match", source: "Style prediction sync", img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&q=80" },
+            { id: 5, brand: "Birkenstock", title: "Arizona Suede 'Mocca'", price: 150, match: "84% Match", source: "Historical data sync", img: "https://images.unsplash.com/photo-1603191659812-ee978eeeef76?w=800&q=80" },
+            { id: 6, brand: "Nike", title: "React Phantom Run Flyknit", price: 140, match: "81% Match", source: "Frequent brand mention", img: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&q=80" },
+            { id: 7, brand: "Converse", title: "Chuck 70 High 'Classic White'", price: 90, match: "79% Match", source: "Luxury demographic", img: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&q=80" },
+            { id: 8, brand: "Nike", title: "Air Max 720 'Sea Forest'", price: 180, match: "76% Match", source: "Search history analysis", img: "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=800&q=80" },
+            { id: 9, brand: "Nike", title: "Air Jordan 1 Retro 'Bred'", price: 180, match: "74% Match", source: "Fitness data sync", img: "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=800&q=80" },
+            { id: 10, brand: "Vans", title: "Old Skool 'Core Classics'", price: 70, match: "71% Match", source: "Interest signal detected", img: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800&q=80" }
+        ];
+
+        let cart = [];
+        let timeLeft = 45;
+        let selectedProduct = null;
+        let userProlificId = "";
+
+        // ===== Choice tracking =====
+        const CONDITION = "custom_low_advisory";
+        const LOG_URL = ""; // Google Apps Script web app URL (leave empty to skip logging)
+        let CHOICE_CODE = "";
+        let settingsShownAt = 0;
+        let sayShownAt = 0, saySeconds = null;
+        let changeCount = 0;
+        let viewCount = 0;
+        function cartInfo() {
+            return {
+                cart_count: cart.length,
+                cart_ids: cart.map(p => p.id).join(";"),
+                cart_items: cart.map(p => p.brand + " " + p.title).join("; "),
+                cart_total: cart.reduce((t, p) => t + p.price, 0),
+                product_views: viewCount
+            };
+        }
+        function logChoice(extra) {
+            const payload = Object.assign({ prolific_id: userProlificId, condition: CONDITION, client_time: new Date().toISOString() }, extra);
+            // Send to Qualtrics when the site is embedded in a survey question (iframe)
+            try { if (window.parent !== window) window.parent.postMessage({ ecostep: payload }, "*"); } catch (e) {}
+            if (!LOG_URL) return;
+            try { fetch(LOG_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); } catch (e) {}
+        }
+
+        function showSettings() {
+            saySeconds = Math.round((Date.now() - sayShownAt) / 100) / 10;
+            document.getElementById('step-say').classList.add('hidden');
+            document.getElementById('step-notice').classList.remove('hidden');
+            settingsShownAt = Date.now();
+        }
+
+        function showNotice() {
+            userProlificId = document.getElementById('prolific-id').value;
+            if (userProlificId.length < 3) { alert("Please enter a valid Prolific ID."); return; }
+            document.getElementById('step-prolific').classList.add('hidden');
+            document.getElementById('auth-title').innerText = "Your Shopping Feed";
+            renderSettings();
+            document.getElementById('step-say').classList.remove('hidden');
+            sayShownAt = Date.now();
+        }
+
+        // ===== Customization: user tunes how the Google data is used =====
+        // Every control has a "None" option. Strength = None or all signals = None means no data is used;
+        // partial None shows which signals are used. Only the sync cues change (see applySignalChoices).
+        const settings = { strength: null, range: null };
+        const signals = ["Purchase history", "Search patterns", "Location"];
+        const signalWeights = {};
+        let dataOffMode = false;
+        function renderSettings() {
+            ["strength"].forEach(group => {
+                document.getElementById('box-group-' + group).innerHTML = [1,2,3,4,5,6,7].map(v =>
+                    `<div class="slider-box border border-gray-200 rounded-md py-3 cursor-pointer hover:border-blue-300 text-center text-[9px] font-black uppercase" onclick="selectBox('${group}', ${v}, this)">&nbsp;</div>`).join('');
+            });
+        }
+        function selectBox(group, val, el) {
+            settings[group] = val;
+            changeCount++;
+            document.getElementById('box-group-' + group).querySelectorAll('.slider-box').forEach(b => b.classList.remove('bg-black', 'border-black'));
+            el.classList.add('bg-black', 'border-black');
+        }
+        function setWeight(btn) {
+            signalWeights[btn.dataset.item] = btn.dataset.opt;
+            changeCount++;
+            btn.parentElement.querySelectorAll('.w-btn').forEach(b => b.classList.remove('bg-black', 'text-white', 'border-black'));
+            btn.classList.add('bg-black', 'text-white', 'border-black');
+        }
+        function submitSettings() {
+            const done = settings.strength !== null;
+            if (!done) { alert("Please complete every setting before continuing."); return; }
+            const W = { None: 0, Low: 1, Medium: 2, High: 3 };
+            CHOICE_CODE = "" + settings.strength;
+            logChoice({ event: "choice", strength: settings.strength, changes: changeCount, seconds_on_say: saySeconds, seconds_on_settings: Math.round((Date.now() - settingsShownAt) / 100) / 10 });
+            // No opt-out option: data use is held constant (as in proactive).
+            startGmailSync();
+        }
+        function applySignalChoices() {
+            const allSignalsOff = false;
+            const dataOff = allSignalsOff || settings.strength === 0;
+            const partial = !dataOff && signals.some(s => signalWeights[s] === "None");
+            dataOffMode = dataOff;
+            if (dataOff) {
+                // No Google data is used: every sync cue says so (same off-state as the reactive condition).
+                document.getElementById('hero-title').innerText = "Trending Now.";
+                document.getElementById('sync-text').innerText = "Loading trending picks...";
+                document.getElementById('timer-prefix').innerText = "No data synced.";
+                const badge = document.getElementById('sync-badge');
+                badge.innerText = "Data Sync Off";
+                badge.className = "text-[9px] font-black px-3 py-1 bg-gray-100 text-gray-500 border border-gray-200 rounded-full uppercase";
+            } else if (partial) {
+                const used = signals.filter(s => signalWeights[s] !== "None").join(" & ").toLowerCase();
+                document.getElementById('sync-text').innerText = "Syncing your Google account (" + used + " only)...";
+                document.getElementById('sync-badge').innerText = "Data Sync Active (" + used + ")";
+            }
+        }
+
+        function startGmailSync() {
+            document.getElementById('login-card').classList.add('hidden');
+            document.getElementById('sync-loading').classList.remove('hidden');
+            startGlobalTimer();
+            setTimeout(() => {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-site').classList.remove('hidden');
+                document.getElementById('main-site').classList.add('opacity-100');
+                initProducts();
+            }, 1500);
+        }
+
+        function startGlobalTimer() {
+            document.getElementById('timer-layer').style.display = 'flex';
+            const timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('countdown-text').innerText = timeLeft;
+                document.getElementById('progress-bar').style.width = (timeLeft / 45 * 100) + "%";
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    document.getElementById('finish-overlay').classList.remove('hidden');
+
+                    // 4자리 랜덤 숫자 생성
+                    const randomCode = Math.floor(1000 + Math.random() * 9000);
+                    const fullCode = randomCode + "-" + CHOICE_CODE;
+                    logChoice(Object.assign({ event: "complete", completion_code: fullCode }, cartInfo()));
+                    alert("Time is up! Your completion code is: " + fullCode);
+                }
+            }, 1000);
+        }
+
+        function initProducts() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = products.map(p => `
+                <div class="cursor-pointer group" onclick="openModal(${p.id})">
+                    <div class="overflow-hidden rounded-lg bg-gray-50 aspect-[1/1.2]"><img src="${p.img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500"></div>
+                    <div class="mt-5"><p class="text-[10px] font-black text-gray-400 uppercase">${p.brand}</p><p class="text-[12px] font-black uppercase">${p.title}</p><p class="text-sm font-bold mt-1">$${p.price}</p></div>
+                </div>`).join('');
+        }
+
+        function openModal(id) {
+            selectedProduct = products.find(p => p.id === id);
+            viewCount++;
+            document.getElementById('modal-img').src = selectedProduct.img;
+            document.getElementById('modal-brand').innerText = selectedProduct.brand;
+            document.getElementById('modal-title').innerText = selectedProduct.title;
+            document.getElementById('modal-price').innerText = `$${selectedProduct.price}`;
+            document.getElementById('product-modal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('product-modal').classList.add('hidden'); }
+        function toggleCart() {
+            document.getElementById('cart-drawer').classList.toggle('cart-open');
+            document.getElementById('cart-overlay').classList.toggle('hidden');
+        }
+        function addToCart() {
+            cart.push(selectedProduct);
+            logChoice(Object.assign({ event: "cart" }, cartInfo()));
+            updateCartUI();
+            const btn = document.getElementById('add-btn');
+            btn.innerText = "ADDED TO BAG";
+            setTimeout(() => { btn.innerText = "ADD TO BAG"; closeModal(); toggleCart(); }, 600);
+        }
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.length;
+            const cartItems = document.getElementById('cart-items');
+            let total = 0;
+            cartItems.innerHTML = cart.map((item) => {
+                total += item.price;
+                return `<div class="flex gap-4 items-center border-b border-gray-50 pb-6"><div class="flex-1"><p class="text-xs font-black uppercase">${item.title}</p><p class="text-sm font-bold">$${item.price}</p></div></div>`;
+            }).join('');
+            document.getElementById('cart-total').innerText = `$${total}`;
+        }
+        // Prefill Prolific ID when the survey passes ?pid=
+        (function () {
+            const pid = new URLSearchParams(window.location.search).get("pid");
+            if (pid) document.getElementById("prolific-id").value = pid;
+        })();
+    </script>
+</body>
+</html>
