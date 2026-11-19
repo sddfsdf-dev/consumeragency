@@ -53,8 +53,8 @@
             <div id="step-say" class="hidden space-y-8">
                 <div class="border-2 border-gray-800 rounded-md p-6 bg-white text-left">
                     <p class="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">How your feed is decided</p>
-                    <p class="text-xl font-black text-gray-900 mb-3 tracking-tight">You decide how your data is used</p>
-                    <p class="text-sm text-gray-700 leading-relaxed">On the next screen, you can tell us how you would like your data to be used for your feed. EcoStep will <b>follow your choices exactly as you set them</b>.</p>
+                    <p class="text-xl font-black text-gray-900 mb-3 tracking-tight">You decide how your data shapes your feed</p>
+                    <p class="text-sm text-gray-700 leading-relaxed">On the next screen, you can tell us how you would like your data to shape your feed. EcoStep will <span style="background:#FEF08A;padding:0 3px;font-weight:700">follow your choices exactly as you set them</span>. To reflect what you want, you make the final decision about how your data is used.</p>
                 </div>
                 <button onclick="showSettings()" class="w-full bg-black text-white py-4 rounded-md font-bold text-sm">Continue</button>
             </div>
@@ -62,18 +62,12 @@
             <div id="step-notice" class="hidden space-y-8">
                 <div class="border border-blue-100 bg-blue-50 rounded-md p-5 text-left">
                     <p class="text-sm font-bold text-gray-900 mb-3">Personalization settings</p>
-                    <p class="text-sm text-gray-700 leading-relaxed">EcoStep analyzes your Google account data (purchase history, search patterns, and location) to provide highly curated product suggestions. Use the setting below to indicate how you would like this data to shape your feed.</p>
+                    <p class="text-sm text-gray-700 leading-relaxed">EcoStep uses your Google account data (purchase history, search patterns, and location) to personalize your feed. Tell us how you would like this data to shape your feed.</p>
                 </div>
 
-                <div class="space-y-2">
-                    <p class="text-[10px] font-black uppercase text-gray-400 text-center tracking-widest">How strongly should your data shape your feed?</p>
-                    <div class="flex justify-between text-[10px] font-black uppercase text-gray-400"><span>Light</span><span>Strong</span></div>
-                    <div class="grid grid-cols-7 gap-1.5" id="box-group-strength"></div>
-                </div>
+                <div id="pref-list" class="space-y-6"></div>
 
-
-
-                <p class="text-xs font-bold text-gray-600 text-center">Reminder: EcoStep will follow your choices exactly.</p>
+                <p class="text-xs font-bold text-gray-600 text-center">Reminder: EcoStep will <span style="background:#FEF08A;padding:0 3px;font-weight:700">follow your choices exactly</span>.</p>
                 <button onclick="submitSettings()" class="w-full bg-black text-white py-4 rounded-md font-bold text-sm">Start Shopping</button>
             </div>
         </div>
@@ -192,58 +186,51 @@
             sayShownAt = Date.now();
         }
 
-        // ===== Customization: user tunes how the Google data is used =====
-        // Every control has a "None" option. Strength = None or all signals = None means no data is used;
-        // partial None shows which signals are used. Only the sync cues change (see applySignalChoices).
-        const settings = { strength: null, range: null };
-        const signals = ["Purchase history", "Search patterns", "Location"];
-        const signalWeights = {};
-        let dataOffMode = false;
+        // ===== Customization: participant states what the feed should show =====
+        const N_ITEMS = 1; // 1 = low work, 10 = high work
+        const PREFS = [
+            { key: "priority",   q: "Which of your data should matter most for your feed?", opts: ["Purchase history", "Search patterns", "Location"] },
+            { key: "w_purchase", q: "How much should your purchase history count?", opts: ["Low", "Medium", "High"] },
+            { key: "w_search",   q: "How much should your search patterns count?", opts: ["Low", "Medium", "High"] },
+            { key: "w_location", q: "How much should your location count?", opts: ["Low", "Medium", "High"] },
+            { key: "range",      q: "How broad should your recommendations be?", opts: ["Close to my history", "A mix", "Explore new styles"] },
+            { key: "lookback",   q: "How far back should your history be used?", opts: ["Last month", "Last 6 months", "Last year"] },
+            { key: "loc_detail", q: "How precise should your location be?", opts: ["City", "Region", "Country"] },
+            { key: "similar",    q: "How often should items similar to your past purchases appear?", opts: ["Rarely", "Sometimes", "Often"] },
+            { key: "spending",   q: "How much should your past spending shape the prices shown?", opts: ["Not much", "Somewhat", "A lot"] },
+            { key: "refresh",    q: "How often should your feed update with new data?", opts: ["Every visit", "Daily", "Weekly"] }
+        ].slice(0, N_ITEMS);
+        const prefs = {};
         function renderSettings() {
-            ["strength"].forEach(group => {
-                document.getElementById('box-group-' + group).innerHTML = [1,2,3,4,5,6,7].map(v =>
-                    `<div class="slider-box border border-gray-200 rounded-md py-3 cursor-pointer hover:border-blue-300 text-center text-[9px] font-black uppercase" onclick="selectBox('${group}', ${v}, this)">&nbsp;</div>`).join('');
-            });
+            document.getElementById('pref-list').innerHTML = PREFS.map(p => `
+                <div class="space-y-2">
+                    <p class="text-[10px] font-black uppercase text-gray-400 text-center tracking-widest">${p.q}</p>
+                    <div class="flex flex-wrap justify-center gap-1.5">
+                        ${p.opts.map((o, i) => `<button type="button" data-key="${p.key}" data-idx="${i}" onclick="setPref(this)" class="p-btn border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold uppercase hover:border-blue-300">${o}</button>`).join('')}
+                    </div>
+                </div>`).join('');
         }
-        function selectBox(group, val, el) {
-            settings[group] = val;
+        function setPref(btn) {
+            prefs[btn.dataset.key] = Number(btn.dataset.idx);
             changeCount++;
-            document.getElementById('box-group-' + group).querySelectorAll('.slider-box').forEach(b => b.classList.remove('bg-black', 'border-black'));
-            el.classList.add('bg-black', 'border-black');
-        }
-        function setWeight(btn) {
-            signalWeights[btn.dataset.item] = btn.dataset.opt;
-            changeCount++;
-            btn.parentElement.querySelectorAll('.w-btn').forEach(b => b.classList.remove('bg-black', 'text-white', 'border-black'));
+            btn.parentElement.querySelectorAll('.p-btn').forEach(b => b.classList.remove('bg-black', 'text-white', 'border-black'));
             btn.classList.add('bg-black', 'text-white', 'border-black');
         }
         function submitSettings() {
-            const done = settings.strength !== null;
-            if (!done) { alert("Please complete every setting before continuing."); return; }
-            const W = { None: 0, Low: 1, Medium: 2, High: 3 };
-            CHOICE_CODE = "" + settings.strength;
-            logChoice({ event: "choice", strength: settings.strength, changes: changeCount, seconds_on_say: saySeconds, seconds_on_settings: Math.round((Date.now() - settingsShownAt) / 100) / 10 });
-            // No opt-out option: data use is held constant (as in proactive).
+            const done = PREFS.every(p => prefs[p.key] !== undefined);
+            if (!done) { alert("Please answer every question before continuing."); return; }
+            CHOICE_CODE = PREFS.map(p => prefs[p.key] + 1).join("");
+            const chosen = {};
+            PREFS.forEach(p => { chosen["pref_" + p.key] = p.opts[prefs[p.key]]; });
+            logChoice(Object.assign({ event: "choice", changes: changeCount, seconds_on_say: saySeconds, seconds_on_settings: Math.round((Date.now() - settingsShownAt) / 100) / 10 }, chosen));
             startGmailSync();
         }
-        function applySignalChoices() {
-            const allSignalsOff = false;
-            const dataOff = allSignalsOff || settings.strength === 0;
-            const partial = !dataOff && signals.some(s => signalWeights[s] === "None");
-            dataOffMode = dataOff;
-            if (dataOff) {
-                // No Google data is used: every sync cue says so (same off-state as the reactive condition).
-                document.getElementById('hero-title').innerText = "Trending Now.";
-                document.getElementById('sync-text').innerText = "Loading trending picks...";
-                document.getElementById('timer-prefix').innerText = "No data synced.";
-                const badge = document.getElementById('sync-badge');
-                badge.innerText = "Data Sync Off";
-                badge.className = "text-[9px] font-black px-3 py-1 bg-gray-100 text-gray-500 border border-gray-200 rounded-full uppercase";
-            } else if (partial) {
-                const used = signals.filter(s => signalWeights[s] !== "None").join(" & ").toLowerCase();
-                document.getElementById('sync-text').innerText = "Syncing your Google account (" + used + " only)...";
-                document.getElementById('sync-badge').innerText = "Data Sync Active (" + used + ")";
-            }
+
+        // Feed: same 10 products, same order, in every condition.
+        const PRODUCT_TYPE = { 1: 0, 2: 0, 3: 0, 4: 1, 5: 3, 6: 2, 7: 1, 8: 0, 9: 1, 10: 0 };
+        function orderedProducts() {
+            return products; // same feed, same order in every condition
+            return products.filter(p => PRODUCT_TYPE[p.id] === prefs.type).concat(products.filter(p => PRODUCT_TYPE[p.id] !== prefs.type));
         }
 
         function startGmailSync() {
@@ -279,7 +266,7 @@
 
         function initProducts() {
             const grid = document.getElementById('product-grid');
-            grid.innerHTML = products.map(p => `
+            grid.innerHTML = orderedProducts().map(p => `
                 <div class="cursor-pointer group" onclick="openModal(${p.id})">
                     <div class="overflow-hidden rounded-lg bg-gray-50 aspect-[1/1.2]"><img src="${p.img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500"></div>
                     <div class="mt-5"><p class="text-[10px] font-black text-gray-400 uppercase">${p.brand}</p><p class="text-[12px] font-black uppercase">${p.title}</p><p class="text-sm font-bold mt-1">$${p.price}</p></div>
